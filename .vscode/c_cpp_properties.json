@@ -1,0 +1,13 @@
+{
+    "configurations": [
+        {
+            "name": "Default",
+            "cppStandard": "c++26",
+            "includePath": [
+                "${default}"
+            ],
+            "intelliSenseMode": "${default}"
+        }
+    ],
+    "version": 4
+}

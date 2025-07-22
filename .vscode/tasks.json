@@ -1,0 +1,28 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Compile",
+            "command": "g++",
+            "args": [
+                "src/main.cpp",
+                "-o",
+                "bin/main",
+                "-std=c++26",
+                "-Wall",
+                "-Wextra",
+                "-Wpedantic",
+                "-m64",
+                "-s",
+                "-static",
+                "-O3",
+                "-pipe",
+                "-march=native",
+                "-I",
+                "/home/marr-ales-fios/include"
+            ],
+            "problemMatcher": "$gcc",
+            "group": "test"
+        }
+    ]
+}
