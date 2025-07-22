@@ -2,7 +2,7 @@ const serverbox = document.getElementById("serverbox");
 const statusmsg = document.getElementById("status");
 serverbox.addEventListener("keyup", async (e) => {
     if (e.key === "Enter") {
-        const url = `http://${serverbox.value}`;
+        const url = serverbox.value;
         try {
             const resp = await fetch(`${url}/ping`);
             const rtext = await resp.text();
