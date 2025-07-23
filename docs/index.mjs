@@ -36,10 +36,13 @@ function load_items() {
         items = BASE_ITEMS.slice();
     }
     else {
-        items = BASE_ITEMS + JSON.parse(data);
+        items = JSON.parse(data);
     }
     itemnames.clear();
     items.forEach(item => itemnames.add(item.name));
+}
+function save_items() {
+    localStorage.setItem("items", JSON.stringify(items));
 }
 load_items();
 const selected_ingredients = [null, null];
@@ -107,6 +110,7 @@ function register_item(item) {
         libpanel.append(display_item(item, ClickAction.INSERT));
         itemnames.add(item.name);
     }
+    save_items();
 }
 async function craft_selected() {
     const lhs = selected_ingredients[0];

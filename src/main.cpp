@@ -1,4 +1,5 @@
 #include<cppp/string.hpp>
+#include<cppp/bfile.hpp>
 #include<iostream>
 #include<csignal>
 #include<cstdint>
@@ -10,6 +11,14 @@
 #include<array>
 #include<bit>
 using namespace std::literals;
+void normalize(cppp::sv s,cppp::str& out){
+    for(char8_t c : s){
+        if(c>=u8'A'&&c<=u8'Z'){
+            c += (u8'a'-u8'A');
+        }
+        out.push_back(c);
+    }
+}
 cppp::str uescape(cppp::sv s){
     constexpr static std::bitset<256uz> SAFE{"0000000000000000000000000000000000000000000001101111111111000000011111111111111111111111111000010111111111111111111111111110001000000000000000000000000000000000000000000000000000110000010000000000000000000000000000000000000000000000000000000000000000000000"s};
     constexpr static std::array<char8_t,16uz> TOHEX{u8'0',u8'1',u8'2',u8'3',u8'4',u8'5',u8'6',u8'7',u8'8',u8'9',u8'A',u8'B',u8'C',u8'D',u8'E',u8'F'};
@@ -31,11 +40,47 @@ struct ItemData{
     cppp::str icon;
     cppp::str discovered_by;
 };
+bool frdstr(cppp::BinaryFile& bf,cppp::str& s){
+    std::uint64_t length{bf.readqle()};
+    if(bf.eof()){return false;}
+    s.resize(length);
+    return bf.fread(cppp::buffer(reinterpret_cast<std::byte*>(s.data()),length));
+}
+void fwtstr(const cppp::str& s,cppp::BinaryFile& bf){
+    bf.writeqle(s.size());
+    bf.write(cppp::frozenbuffer(reinterpret_cast<const std::byte*>(s.data()),s.size()));
+}
 class ItemDB{
     std::vector<ItemData> db;
+    cppp::BinaryFile file;
     public:
+        ItemDB(std::filesystem::path dbf){
+            if(std::filesystem::exists(dbf)){
+                if(std::filesystem::is_directory(dbf)) throw std::runtime_error("Cannot create DB: directory exists with the same name");
+                file.open(dbf,std::ios_base::in|std::ios_base::out|std::ios_base::binary);
+                while(true){
+                    ItemData& id = db.emplace_back();
+                    if(!frdstr(file,id.name)) break;
+                    normalize(id.name,id.normname);
+                    if(!frdstr(file,id.icon)) throw std::runtime_error("Error: truncated database entry");
+                    if(!frdstr(file,id.discovered_by)) throw std::runtime_error("Error: truncated database entry");
+                }
+                file.errclr();
+            }else{
+                file.open(dbf,std::ios_base::out|std::ios_base::trunc|std::ios_base::binary);
+            }
+        }
         ItemData& create(){
             return db.emplace_back();
+        }
+        void pop(){
+            db.pop_back();
+        }
+        void save(const ItemData& d){
+            fwtstr(d.name,file);
+            fwtstr(d.icon,file);
+            fwtstr(d.discovered_by,file);
+            file.flush();
         }
         const std::vector<ItemData>& data() const{
             return db;
@@ -59,20 +104,13 @@ void wtstr(cppp::sv s){
     std::cout.write(reinterpret_cast<const char*>(&length),sizeof length);
     std::cout.write(reinterpret_cast<const char*>(s.data()),s.size());
 }
-void normalize(cppp::sv s,cppp::str& out){
-    for(char8_t c : s){
-        if(c>=u8'A'&&c<=u8'Z'){
-            c += (u8'a'-u8'A');
-        }
-        out.push_back(c);
-    }
-}
-ItemDB items;
+ItemDB items{u8"db/db.bin"sv};
 std::atomic_bool interrupt{false};
 extern "C" void interrupt_search(int){
     interrupt.store(true,std::memory_order_release);
 }
 int main(){
+    std::signal(SIGINT,SIG_IGN);
     std::cin.exceptions(std::ios_base::failbit|std::ios_base::badbit|std::ios_base::eofbit);
     std::cout.exceptions(std::ios_base::failbit|std::ios_base::badbit);
     while(true){
@@ -83,11 +121,19 @@ int main(){
                 rdstr(d.icon);
                 rdstr(d.discovered_by);
                 normalize(d.name,d.normname);
+                for(const auto& de : items.data()){
+                    if(de.normname == d.normname){
+                        items.pop();
+                        goto nosave;
+                    }
+                }
+                items.save(d);
+                nosave:
                 break;
             }
             case 'l': {
                 interrupt.store(false,std::memory_order_release);
-                std::signal(SIGINT,interrupt_search);
+                std::signal(SIGHUP,interrupt_search);
                 cppp::str lookup;
                 rdstr(lookup);
                 cppp::str normlookup;
@@ -107,6 +153,7 @@ int main(){
                 std::cout.flush();
                 break;
             }
+            case 'e': return 0;
             default:
                 [[unlikely]] return -1;
         }

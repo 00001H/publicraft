@@ -38,9 +38,16 @@ class DatabaseBackend:
             icon = rdstr(self.proc.stdout)
             discoverer = rdstr(self.proc.stdout)
             if (yield (name,icon,discoverer)) is InterruptQuery:
-                self.proc.send_signal(signal.SIGINT)
+                self.proc.send_signal(signal.SIGHUP)
     def stop(self):
-        self.proc.terminate()
+        self.proc.stdin.write(b"e")
+        self.proc.stdin.flush()
+        try:
+            self.proc.wait(5)
+        except subprocess.TimeoutExpired:
+            print("Timeout of 5s expired waiting for backend to shut down. Killing...",file=sys.stderr)
+            self.proc.kill()
+        
 sess = cloudscraper.create_scraper()
 sess.headers["Referer"] = "https://neal.fun/infinite-craft/"
 db = DatabaseBackend()
@@ -113,7 +120,8 @@ class InfiniteCraftRequestHandler(BaseHTTPRequestHandler):
                 name = resp["result"]
                 icon = resp["emoji"]
                 discoverer = uname if resp["isNew"] else "<unknown>"
-                db.add(name,icon,discoverer)
+                with db_lock:
+                    db.add(name,icon,discoverer)
             except Exception:
                 global errors
                 errors += 1

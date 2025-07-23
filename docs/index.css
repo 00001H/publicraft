@@ -5,7 +5,7 @@ body{
     display: flex;
     font-size: 14pt;
 }
-#favpanel{
+#leftpanel{
     border-right: 1px solid black;
     width: 15vw;
 }
@@ -43,6 +43,7 @@ body{
 #libpanel{
     flex-grow: 1;
     border-left: 1px solid black;
+    overflow: auto;
 }
 .slot{
     &:empty{
@@ -56,9 +57,6 @@ body{
     &:not(:empty){
         cursor: pointer;
     }
-}
-#search-panel{
-    border-left: 1px solid black;
 }
 .element{
     width: fit-content;
@@ -78,6 +76,11 @@ body{
     display: flex;
     flex-direction: column;
     padding: 5px;
+    flex-grow: 1;
+    contain: size;
+}
+#dbsearchresults{
+    overflow: auto;
 }
 #dbsearchbar{
     margin-left: auto;
