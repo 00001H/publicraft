@@ -95,7 +95,7 @@ async function craft(lhs, rhs) {
     const query = new URLSearchParams({ lhs: lhs.name, rhs: rhs.name, username: uname.value });
     const resp = await fetch(`${server}/craft?${query}`);
     if (resp.status !== 200) {
-        statusmsg.textContent = `Server responds ${resp.status}`;
+        statusmsg.textContent = `Server responds ${resp.status} (${await resp.text()})`;
         throw new Error("crafting request failed");
     }
     statusmsg.textContent = "";

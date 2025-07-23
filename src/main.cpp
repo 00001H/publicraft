@@ -70,17 +70,15 @@ class ItemDB{
                 file.open(dbf,std::ios_base::out|std::ios_base::trunc|std::ios_base::binary);
             }
         }
-        ItemData& create(){
-            return db.emplace_back();
-        }
         void pop(){
             db.pop_back();
         }
-        void save(const ItemData& d){
+        void save(ItemData&& d){
             fwtstr(d.name,file);
             fwtstr(d.icon,file);
             fwtstr(d.discovered_by,file);
             file.flush();
+            db.push_back(std::move(d));
         }
         const std::vector<ItemData>& data() const{
             return db;
@@ -116,7 +114,7 @@ int main(){
     while(true){
         switch(std::char_traits<char>::to_char_type(std::cin.get())){
             case 'c': {
-                ItemData& d = items.create();
+                ItemData d;
                 rdstr(d.name);
                 rdstr(d.icon);
                 rdstr(d.discovered_by);
@@ -127,7 +125,7 @@ int main(){
                         goto nosave;
                     }
                 }
-                items.save(d);
+                items.save(std::move(d));
                 nosave:
                 break;
             }
