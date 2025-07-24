@@ -189,6 +189,9 @@ async function rdstr(stream) {
     return utf8dec.decode(await read(stream, size));
 }
 dbsearchbar.value = "";
+dbsearchbar.addEventListener("keyup", (e) => {
+    e.stopPropagation();
+});
 dbsearchbar.addEventListener("input", async () => {
     const kw = dbsearchbar.value;
     dbsearchresults.replaceChildren();
