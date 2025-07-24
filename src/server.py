@@ -39,6 +39,9 @@ class DatabaseBackend:
             discoverer = rdstr(self.proc.stdout)
             if (yield (name,icon,discoverer)) is InterruptQuery:
                 self.proc.send_signal(signal.SIGHUP)
+                while rdstr(self.proc.stdout):
+                    pass
+                break
     def stop(self):
         self.proc.stdin.write(b"e")
         self.proc.stdin.flush()
@@ -150,7 +153,6 @@ class InfiniteCraftRequestHandler(BaseHTTPRequestHandler):
                             self.wfile.flush()
                         except (IOError, OverflowError):
                             it.send(True)
-                            break
                 except StopIteration:
                     pass
         else:
