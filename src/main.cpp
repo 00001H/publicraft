@@ -39,6 +39,9 @@ struct ItemData{
     cppp::str normname;
     cppp::str icon;
     cppp::str discovered_by;
+    bool operator==(const ItemData& other) const{
+        return normname == other.normname;
+    }
 };
 bool frdstr(cppp::BinaryFile& bf,cppp::str& s){
     std::uint64_t length{bf.readqle()};
@@ -60,7 +63,10 @@ class ItemDB{
                 file.open(dbf,std::ios_base::in|std::ios_base::out|std::ios_base::binary);
                 while(true){
                     ItemData& id = db.emplace_back();
-                    if(!frdstr(file,id.name)) break;
+                    if(!frdstr(file,id.name)){
+                        db.pop_back();
+                        break;
+                    }
                     normalize(id.name,id.normname);
                     if(!frdstr(file,id.icon)) throw std::runtime_error("Error: truncated database entry");
                     if(!frdstr(file,id.discovered_by)) throw std::runtime_error("Error: truncated database entry");
@@ -69,9 +75,16 @@ class ItemDB{
             }else{
                 file.open(dbf,std::ios_base::out|std::ios_base::trunc|std::ios_base::binary);
             }
-        }
-        void pop(){
-            db.pop_back();
+            // auto ue = std::ranges::begin(std::ranges::unique(db));
+            // std::vector<ItemData> uniq{std::ranges::begin(db),ue};
+            // file.close();
+            // cppp::BinaryFile file2(dbf,std::ios_base::out|std::ios_base::trunc|std::ios_base::binary);
+            // for(const ItemData& d : uniq){
+            //     fwtstr(d.name,file2);
+            //     fwtstr(d.icon,file2);
+            //     fwtstr(d.discovered_by,file2);
+            // }
+            // file2.close();
         }
         void save(ItemData&& d){
             fwtstr(d.name,file);
@@ -119,14 +132,9 @@ int main(){
                 rdstr(d.icon);
                 rdstr(d.discovered_by);
                 normalize(d.name,d.normname);
-                for(const auto& de : items.data()){
-                    if(de.normname == d.normname){
-                        items.pop();
-                        goto nosave;
-                    }
+                if(!std::ranges::contains(items.data(),d)){
+                    items.save(std::move(d));
                 }
-                items.save(std::move(d));
-                nosave:
                 break;
             }
             case 'l': {
